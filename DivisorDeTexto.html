@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Divisor de Texto</title>
+    <!-- Incluindo Tailwind CSS para um design moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilo para a barra de rolagem do textarea e resultado */
+        textarea::-webkit-scrollbar,
+        #resultado::-webkit-scrollbar {
+            width: 8px;
+        }
+        textarea::-webkit-scrollbar-track,
+        #resultado::-webkit-scrollbar-track {
+            background: #1e293b; /* slate-800 */
+            border-radius: 10px;
+        }
+        textarea::-webkit-scrollbar-thumb,
+        #resultado::-webkit-scrollbar-thumb {
+            background: #475569; /* slate-600 */
+            border-radius: 10px;
+        }
+        textarea::-webkit-scrollbar-thumb:hover,
+        #resultado::-webkit-scrollbar-thumb:hover {
+            background: #64748b; /* slate-500 */
+        }
+        /* Classe para o bloco de texto destacado */
+        .bloco-selecionado {
+            background-color: #0f172a; /* slate-900 */
+            --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+            --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+            box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+            --tw-ring-color: #38bdf8; /* sky-400 */
+        }
+        /* Classe para feedback visual de drag-over */
+        .drag-over {
+            border-color: #38bdf8 !important; /* Tailwind's sky-400 */
+            background-color: rgba(14, 165, 233, 0.1) !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 flex flex-col min-h-screen font-sans">
+
+    <main class="flex-grow container mx-auto p-4 sm:p-6 md:p-8">
+        <div class="max-w-4xl mx-auto bg-slate-800 rounded-xl shadow-lg shadow-black/30 p-6 sm:p-8">
+
+            <div class="text-center mb-6">
+                <h1 class="text-3xl sm:text-4xl font-bold text-slate-100">Divisor de Texto</h1>
+                <p class="text-slate-400 mt-2">Cole seu texto para dividi-lo em blocos otimizados.</p>
+            </div>
+
+            <!-- Formulário de entrada de texto -->
+            <form id="divisorForm">
+                <label for="textoInput" class="block text-lg font-medium text-slate-300 mb-2">Seu texto completo:</label>
+                <textarea id="textoInput" class="w-full h-60 p-4 bg-slate-900 text-slate-200 placeholder-slate-500 border-2 border-dashed border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-solid transition-all duration-200" placeholder="Arraste e solte um arquivo .txt aqui, cole o texto ou comece a digitar..." required></textarea>
+                <div class="text-right text-sm text-slate-400 mt-2 flex justify-end gap-x-3">
+                    <span id="contadorPalavras">Palavras: 0</span>
+                    <span>|</span>
+                    <span id="contadorCaracteres">Caracteres: 0</span>
+                </div>
+                
+                <!-- Configurações -->
+                <div class="mt-4 flex flex-col gap-y-4">
+                    <!-- Linha para input e botão -->
+                    <div class="flex flex-wrap items-end gap-x-4 gap-y-2">
+                        <div>
+                            <label for="tamanhoBlocoInput" class="block text-sm font-medium text-slate-400">Tamanho máx. do bloco:</label>
+                            <input type="number" id="tamanhoBlocoInput" value="8500" min="100" class="w-36 mt-1 p-2 bg-slate-700 text-slate-200 border border-slate-600 rounded-lg focus:ring-2 focus:ring-sky-500">
+                        </div>
+                        <button type="button" id="resetarConfigBtn" class="bg-amber-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-600 focus:outline-none focus:ring-4 focus:ring-amber-400/50">
+                            Resetar Padrão
+                        </button>
+                    </div>
+                    <!-- Linha para checkbox -->
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="tamanhoIgualCheckbox" class="h-4 w-4 rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600">
+                        <label for="tamanhoIgualCheckbox" class="text-sm font-medium text-slate-300">Blocos de Mesmo Tamanho</label>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex flex-col sm:flex-row gap-4">
+                    <button type="submit" class="w-full sm:w-auto flex-1 bg-sky-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-sky-700 focus:outline-none focus:ring-4 focus:ring-sky-400/50 transition-transform transform hover:scale-105">
+                        Dividir Texto
+                    </button>
+                    <button type="button" id="limparBtn" class="w-full sm:w-auto flex-1 bg-slate-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-slate-700 focus:outline-none focus:ring-4 focus:ring-slate-400/50 transition-transform transform hover:scale-105">
+                        Limpar
+                    </button>
+                </div>
+            </form>
+
+            <!-- Seção de Resultados -->
+            <div id="secaoResultado" class="mt-8 hidden">
+                <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                    <h2 class="text-2xl font-bold text-slate-100">Resultado</h2>
+                    <div class="flex gap-2">
+                        <button id="blocoAnteriorBtn" class="bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-400/50 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            &larr; Anterior
+                        </button>
+                        <button id="proximoBlocoBtn" class="bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-500 focus:outline-none focus:ring-4 focus:ring-slate-400/50 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            Próximo &rarr;
+                        </button>
+                        <button id="downloadBtn" class="bg-green-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-400/50 transition-transform transform hover:scale-105">
+                            Download .txt
+                        </button>
+                    </div>
+                </div>
+                <div id="resultado" class="w-full h-80 p-4 border border-slate-700 bg-slate-900/70 rounded-lg overflow-y-auto whitespace-pre-wrap font-mono text-sm text-slate-300"></div>
+                <p id="feedbackCopia" class="text-center text-green-400 font-semibold mt-2 h-6"></p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Rodapé -->
+    <footer class="text-center py-4">
+        <p class="text-slate-400 text-sm">Desenvolvido por Tomazella Games</p>
+    </footer>
+
+    <script>
+        (function() {
+            // Valor padrão para o tamanho do bloco.
+            const TAMANHO_PADRAO_BLOCO = 8500;
+            const originalPlaceholder = "Arraste e solte um arquivo .txt aqui, cole o texto ou comece a digitar...";
+
+            // Variáveis de estado
+            let listaDeBlocos = [];
+            let blocoAtualIndex = -1;
+
+            // Elementos do DOM
+            const form = document.getElementById('divisorForm');
+            const textoInput = document.getElementById('textoInput');
+            const resultadoDiv = document.getElementById('resultado');
+            const secaoResultado = document.getElementById('secaoResultado');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const limparBtn = document.getElementById('limparBtn');
+            const blocoAnteriorBtn = document.getElementById('blocoAnteriorBtn');
+            const proximoBlocoBtn = document.getElementById('proximoBlocoBtn');
+            const feedbackCopia = document.getElementById('feedbackCopia');
+            const tamanhoBlocoInput = document.getElementById('tamanhoBlocoInput');
+            const resetarConfigBtn = document.getElementById('resetarConfigBtn');
+            const tamanhoIgualCheckbox = document.getElementById('tamanhoIgualCheckbox');
+            const contadorCaracteres = document.getElementById('contadorCaracteres');
+            const contadorPalavras = document.getElementById('contadorPalavras');
+
+            /**
+             * Atualiza os contadores de caracteres e palavras na interface.
+             */
+            function atualizarContadores() {
+                const texto = textoInput.value;
+                const palavras = texto.trim().split(/\s+/).filter(Boolean);
+                
+                contadorCaracteres.textContent = `Caracteres: ${texto.length}`;
+                contadorPalavras.textContent = `Palavras: ${texto.trim() === '' ? 0 : palavras.length}`;
+            }
+
+            /**
+             * Lógica padrão: divide o texto em blocos de até `tamanhoMaximo`.
+             * @param {string} texto O texto completo.
+             * @param {number} tamanhoMaximo O número máximo de caracteres por bloco.
+             * @returns {string[]} Um array com os blocos de texto.
+             */
+            function dividirTextoEmBlocos(texto, tamanhoMaximo) {
+                if (!texto) return [];
+                const blocos = [];
+                let textoRestante = texto.trim();
+                while (textoRestante.length > 0) {
+                    if (textoRestante.length <= tamanhoMaximo) {
+                        blocos.push(textoRestante);
+                        break;
+                    }
+                    const trechoParaAnalise = textoRestante.substring(0, tamanhoMaximo);
+                    let pontoDeCorte = -1;
+                    const pontuacoes = ['.', '!', '?', '\n'];
+                    for (const pontuacao of pontuacoes) {
+                        pontoDeCorte = Math.max(pontoDeCorte, trechoParaAnalise.lastIndexOf(pontuacao));
+                    }
+                    if (pontoDeCorte <= 0) pontoDeCorte = trechoParaAnalise.lastIndexOf(' ');
+                    if (pontoDeCorte <= 0) pontoDeCorte = tamanhoMaximo;
+                    else pontoDeCorte++;
+                    
+                    blocos.push(textoRestante.substring(0, pontoDeCorte).trim());
+                    textoRestante = textoRestante.substring(pontoDeCorte).trim();
+                }
+                return blocos;
+            }
+
+            /**
+             * Nova lógica: Tenta dividir o texto em blocos de tamanho o mais uniforme possível.
+             * @param {string} texto O texto completo.
+             * @param {number} tamanhoMaximo O número máximo de caracteres por bloco.
+             * @returns {string[]} Um array com os blocos de texto.
+             */
+            function dividirEmBlocosIguais(texto, tamanhoMaximo) {
+                if (!texto || texto.trim().length === 0) return [];
+                const blocos = [];
+                let textoRestante = texto.trim();
+
+                while (textoRestante.length > 0) {
+                    const blocosRestantes = Math.ceil(textoRestante.length / tamanhoMaximo);
+                    if (blocosRestantes <= 1) {
+                        blocos.push(textoRestante);
+                        break;
+                    }
+                    
+                    const tamanhoAlvo = Math.ceil(textoRestante.length / blocosRestantes);
+                    
+                    let pontoDeCorte = tamanhoAlvo;
+                    // Procura o ponto de corte ideal perto do tamanho alvo, mas sem passar dele
+                    const trechoParaAnalise = textoRestante.substring(0, Math.min(tamanhoAlvo + 200, textoRestante.length));
+                    let melhorPonto = -1;
+                    
+                    const pontuacoes = ['.', '!', '?', '\n'];
+                    for (const pontuacao of pontuacoes) {
+                        melhorPonto = Math.max(melhorPonto, trechoParaAnalise.lastIndexOf(pontuacao));
+                    }
+                    if (melhorPonto <= 0) melhorPonto = trechoParaAnalise.lastIndexOf(' ');
+                    
+                    // Se encontrou um bom ponto, usa. Senão, usa o tamanho alvo.
+                    if (melhorPonto > 0) {
+                         pontoDeCorte = melhorPonto + 1;
+                    }
+                    
+                    blocos.push(textoRestante.substring(0, pontoDeCorte).trim());
+                    textoRestante = textoRestante.substring(pontoDeCorte).trim();
+                }
+                return blocos;
+            }
+
+            function copiarParaClipboard(text) {
+                const elementoTemporario = document.createElement('textarea');
+                elementoTemporario.value = text;
+                elementoTemporario.style.position = 'absolute';
+                elementoTemporario.style.left = '-9999px';
+                document.body.appendChild(elementoTemporario);
+                elementoTemporario.select();
+                try {
+                    document.execCommand('copy');
+                    feedbackCopia.textContent = 'Bloco copiado para a área de transferência!';
+                } catch (err) {
+                    feedbackCopia.textContent = 'Erro ao copiar o texto.';
+                    console.error('Falha ao copiar texto: ', err);
+                }
+                document.body.removeChild(elementoTemporario);
+                setTimeout(() => { feedbackCopia.textContent = ''; }, 3000);
+            }
+
+            function atualizarEstadoBotoes() {
+                blocoAnteriorBtn.disabled = blocoAtualIndex <= 0;
+                proximoBlocoBtn.disabled = blocoAtualIndex >= listaDeBlocos.length - 1;
+            }
+            
+            function selecionarEcopiarBloco(index) {
+                if (index < 0 || index >= listaDeBlocos.length) return;
+                blocoAtualIndex = index;
+                
+                document.querySelectorAll('.bloco').forEach((div, i) => {
+                    if (i === index) {
+                        div.classList.add('bloco-selecionado');
+                        div.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else {
+                        div.classList.remove('bloco-selecionado');
+                    }
+                });
+
+                copiarParaClipboard(listaDeBlocos[index]);
+                atualizarEstadoBotoes();
+            }
+
+            function renderizarBlocos() {
+                resultadoDiv.innerHTML = '';
+                listaDeBlocos.forEach((textoDoBloco, index) => {
+                    const divBloco = document.createElement('div');
+                    divBloco.classList.add('bloco', 'p-3', 'my-2', 'rounded-md', 'transition-all', 'duration-200');
+                    divBloco.textContent = textoDoBloco;
+                    resultadoDiv.appendChild(divBloco);
+
+                    if (index < listaDeBlocos.length - 1) {
+                        const separador = document.createElement('div');
+                        separador.textContent = '========== BLOCO SEGUINTE ==========';
+                        separador.classList.add('text-center', 'text-slate-500', 'font-bold', 'my-2', 'select-none');
+                        resultadoDiv.appendChild(separador);
+                    }
+                });
+            }
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            function highlight() {
+                textoInput.classList.add('drag-over');
+            }
+
+            function unhighlight() {
+                textoInput.classList.remove('drag-over');
+            }
+
+            function handleDrop(e) {
+                let dt = e.dataTransfer;
+                let files = dt.files;
+                handleFiles(files);
+            }
+
+            function handleFiles(files) {
+                const file = files[0];
+                if (file && file.type === "text/plain") {
+                    let reader = new FileReader();
+                    reader.readAsText(file, "UTF-8");
+                    reader.onload = () => {
+                        textoInput.value = reader.result;
+                        atualizarContadores(); // Atualiza contador após carregar arquivo
+                    };
+                    reader.onerror = () => {
+                        textoInput.placeholder = "Erro ao ler o arquivo.";
+                        setTimeout(() => { textoInput.placeholder = originalPlaceholder; }, 3000);
+                    };
+                } else {
+                    textoInput.placeholder = "Formato de arquivo não suportado. Use .txt";
+                    setTimeout(() => { textoInput.placeholder = originalPlaceholder; }, 3000);
+                }
+            }
+            
+            // Adiciona os event listeners
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                textoInput.addEventListener(eventName, preventDefaults, false);
+            });
+            ['dragenter', 'dragover'].forEach(eventName => {
+                textoInput.addEventListener(eventName, highlight, false);
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                textoInput.addEventListener(eventName, unhighlight, false);
+            });
+            textoInput.addEventListener('drop', handleDrop, false);
+            textoInput.addEventListener('input', atualizarContadores); // Atualiza contador ao digitar/colar
+
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const tamanhoMaximo = parseInt(tamanhoBlocoInput.value, 10) || TAMANHO_PADRAO_BLOCO;
+                const eTamanhoIgual = tamanhoIgualCheckbox.checked;
+
+                if (eTamanhoIgual) {
+                    listaDeBlocos = dividirEmBlocosIguais(textoInput.value, tamanhoMaximo);
+                } else {
+                    listaDeBlocos = dividirTextoEmBlocos(textoInput.value, tamanhoMaximo);
+                }
+                
+                blocoAtualIndex = -1;
+                renderizarBlocos();
+                secaoResultado.classList.remove('hidden');
+                atualizarEstadoBotoes();
+            });
+            
+            resetarConfigBtn.addEventListener('click', () => {
+                tamanhoBlocoInput.value = TAMANHO_PADRAO_BLOCO;
+                tamanhoIgualCheckbox.checked = false;
+            });
+
+            blocoAnteriorBtn.addEventListener('click', () => {
+                if (blocoAtualIndex > 0) {
+                    selecionarEcopiarBloco(blocoAtualIndex - 1);
+                }
+            });
+
+            proximoBlocoBtn.addEventListener('click', () => {
+                if (blocoAtualIndex < listaDeBlocos.length - 1) {
+                    selecionarEcopiarBloco(blocoAtualIndex + 1);
+                }
+            });
+            
+            downloadBtn.addEventListener('click', function() {
+                if (listaDeBlocos.length > 0) {
+                    const conteudo = listaDeBlocos.join('\n\n========== BLOCO SEGUINTE ==========\n\n');
+                    const blob = new Blob([conteudo], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'texto_dividido.txt';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }
+            });
+
+            limparBtn.addEventListener('click', function() {
+                textoInput.value = '';
+                resultadoDiv.innerHTML = '';
+                secaoResultado.classList.add('hidden');
+                listaDeBlocos = [];
+                blocoAtualIndex = -1;
+                feedbackCopia.textContent = '';
+                textoInput.placeholder = originalPlaceholder;
+                atualizarContadores(); // Reseta o contador
+            });
+
+            document.oncontextmenu = function() { return false; };
+            document.onkeydown = function(e) {
+                if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+                    e.preventDefault();
+                    return false;
+                }
+            };
+        })();
+    </script>
+</body>
+</html>
